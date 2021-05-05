@@ -1,11 +1,20 @@
-name: 'Your name here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: 'Chrome AWS Lambda Layer Github Action'
+description: 'A github action for publishing lambda layers, but really just one'
+author: 'Alex Velikanov'
 inputs:
-  milliseconds: # change this
+  repoOwner:
     required: true
-    description: 'input description here'
-    default: 'default value if applicable'
+    description: 'Username of repo owner like \'alec2435\''
+  repo:
+    required: true
+    description: 'Name of repo like \'chrome-aws-lambda\''
+  regions:
+    required: true
+    description: 'Names of AWS regions like \'us-west-1,us-east-1\''
+  bucketPrefix:
+    required: true
+    description: 'Prefix for AWS Bucket name like \'static-files-\''
+    default: lambda-layers-
 runs:
   using: 'node12'
   main: 'dist/index.js'
