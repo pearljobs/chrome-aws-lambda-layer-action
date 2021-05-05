@@ -21,4 +21,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: ./
         with:
-          milliseconds: 1000
+          repoOwner: alixaxel
+          repo: chrome-aws-lambda
+          regions: us-west-1,us-east-1
+          bucketPrefix: 'static-files'

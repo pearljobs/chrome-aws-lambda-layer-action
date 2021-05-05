@@ -4,16 +4,16 @@ author: 'Alex Velikanov'
 inputs:
   repoOwner:
     required: true
-    description: 'Username of repo owner like \'alec2435\''
+    description: 'Username of repo owner like "alec2435"'
   repo:
     required: true
-    description: 'Name of repo like \'chrome-aws-lambda\''
+    description: 'Name of repo like "chrome-aws-lambda"'
   regions:
     required: true
-    description: 'Names of AWS regions like \'us-west-1,us-east-1\''
+    description: 'Names of AWS regions like "us-west-1,us-east-1"'
   bucketPrefix:
     required: true
-    description: 'Prefix for AWS Bucket name like \'static-files-\''
+    description: 'Prefix for AWS Bucket name like "static-files-"'
     default: lambda-layers-
 runs:
   using: 'node12'
