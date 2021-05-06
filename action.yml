@@ -15,6 +15,10 @@ inputs:
     required: true
     description: 'Prefix for AWS Bucket name like "static-files-"'
     default: lambda-layers-
+  commit:
+    required: true
+    description: '"true" if you want to commit release info to the repo this is running in'
+
 runs:
   using: 'node12'
   main: 'dist/index.js'
