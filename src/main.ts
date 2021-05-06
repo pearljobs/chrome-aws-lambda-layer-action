@@ -15,20 +15,22 @@ function uploadFromStream(
   name: string,
   bucketPrefix: string
 ): {
-  writeStream: PassThrough
+  writeStream: PassThrough[]
   promise: Promise<S3.ManagedUpload.SendData[]>
 } {
-  const pass = new PassThrough()
+  const passes: PassThrough[] = []
 
   // eslint-disable-next-line @typescript-eslint/promise-function-async
   const promises = regions.map(region => {
+    const pass = new PassThrough()
+    passes.push(pass)
     return new S3({region})
       .upload({Bucket: bucketPrefix + region, Key: name, Body: pass})
       .promise()
   })
 
   return {
-    writeStream: pass,
+    writeStream: passes,
     promise: Promise.all(promises)
   }
 }
@@ -39,21 +41,22 @@ async function run(): Promise<void> {
     const repoOwner: string = core.getInput('repoOwner')
     const regionsRaw: string = core.getInput('regions')
     const bucketPrefix: string = core.getInput('bucketPrefix')
+    const commit: string = core.getInput('commit')
 
     const baseDir = path.join(process.cwd(), '')
     const git = simpleGit({baseDir})
-    let createOnly = false
 
     const regions = regionsRaw.split(',').map(region => region.trim())
     const regionalInfo = new Map<string, string | undefined>()
 
     // Get run data
+    core.debug('Collecting existing layer data')
     for (const region of regions) {
       const lambda = new Lambda({region})
       const versions = await lambda
         .listLayerVersions({LayerName: repo})
         .promise()
-      if (versions?.LayerVersions) {
+      if (versions?.LayerVersions && versions?.LayerVersions.length > 0) {
         const largest = versions.LayerVersions.reduce((prev, curr) =>
           (prev?.Version ?? 0) > (curr?.Version ?? 0) ? prev : curr
         )
@@ -69,6 +72,7 @@ async function run(): Promise<void> {
     }
 
     // Check for new release
+    core.debug('Checking for latest release')
     const releaseData = await octokit.request(
       'GET /repos/{owner}/{repo}/actions/artifacts',
       {
@@ -79,6 +83,8 @@ async function run(): Promise<void> {
 
     if (releaseData.data.total_count <= 0) {
       core.setFailed('Requested repository has no available releases!')
+      // eslint-disable-next-line no-console
+      console.log('fail here lol')
       return
     }
 
@@ -92,16 +98,31 @@ async function run(): Promise<void> {
     const numberedId = parseInt(artifactIdRaw, 10)
 
     if (numberedId === releaseData.data.artifacts[0].id) {
-      createOnly = true
+      core.debug('Layer is current, will only proceed if new region added')
+      if (!Array.from(regionalInfo.values()).includes(undefined)) return
     }
 
     // Check buckets and create if doesn't exist
+    core.debug('Checking buckets')
     for (const region of regions) {
       const s3 = new S3({region})
-      const bucket = await s3
-        .headBucket({Bucket: bucketPrefix + region})
-        .promise()
-      if (bucket.$response.httpResponse.statusCode !== 200) {
+      try {
+        const bucket = await s3
+          .headBucket({Bucket: bucketPrefix + region})
+          .promise()
+        if (bucket.$response.httpResponse.statusCode !== 200) {
+          core.debug(
+            `Creating new bucket ${bucketPrefix + region} in ${region}`
+          )
+          await s3
+            .createBucket({
+              Bucket: bucketPrefix + region,
+              CreateBucketConfiguration: {LocationConstraint: region}
+            })
+            .promise()
+        }
+      } catch (e) {
+        core.debug(`Creating new bucket ${bucketPrefix + region} in ${region}`)
         await s3
           .createBucket({
             Bucket: bucketPrefix + region,
@@ -112,6 +133,7 @@ async function run(): Promise<void> {
     }
 
     // Download, Unzip, Upload to S3
+    core.debug('Collecting files and uploading to S3')
     const axResp = await axios.get(
       'https://api.github.com/repos/alixaxel/chrome-aws-lambda/actions/artifacts/51386671/zip',
       {
@@ -124,7 +146,7 @@ async function run(): Promise<void> {
     const s3Info = await new Promise<S3.ManagedUpload.SendData[]>(resolve => {
       axResp.data.pipe(unzip.Parse()).on('entry', (entry: unzip.Entry) => {
         const upload = uploadFromStream(regions, entry.path, bucketPrefix)
-        entry.pipe(upload.writeStream)
+        for (const pt of upload.writeStream) entry.pipe(pt)
         resolve(upload.promise)
       })
     })
@@ -132,9 +154,9 @@ async function run(): Promise<void> {
     const objectName = s3Info.map(info => info.Key)[0]
 
     // Publish Version
+    core.debug('Publishing layers')
     const newLayers = []
-    for (const [region, version] of regionalInfo.entries()) {
-      if (version !== null && createOnly) continue
+    for (const [region] of regionalInfo.entries()) {
       const lambda = new Lambda({region})
       newLayers.push(
         await lambda
@@ -147,7 +169,11 @@ async function run(): Promise<void> {
       )
     }
 
+    for (const layer of newLayers)
+      core.debug(`Created layer version ${layer.LayerArn}`)
+
     // Update MD and config
+    core.debug('Updating README')
     const regionArns = newLayers.reduce(
       (acc, newLayer) =>
         (acc += `\n| ${newLayer.LayerArn?.replace(
@@ -163,9 +189,11 @@ Last updated ${new Date()}
 | Region | ARN |
 | --- | --- |${regionArns}`
 
-    git.commit('Updated README for latest release info', 'README.md')
-    fs.writeFileSync(path.join(baseDir, 'README.md'), newMD)
-    git.push()
+    if (commit === 'true') {
+      git.commit('Updated README for latest release info', 'README.md')
+      fs.writeFileSync(path.join(baseDir, 'README.md'), newMD)
+      git.push()
+    }
   } catch (error) {
     core.setFailed(error.message)
   }
