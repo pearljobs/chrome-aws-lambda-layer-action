@@ -6,7 +6,7 @@ import {S3, Lambda} from 'aws-sdk'
 import unzip from 'unzipper'
 import {PassThrough} from 'stream'
 import axios from 'axios'
-import fs from 'fs/promises'
+import fs from 'fs'
 
 const octokit = new Octokit()
 
@@ -163,8 +163,8 @@ Last updated ${new Date()}
 | Region | ARN |
 | --- | --- |${regionArns}`
 
-    await fs.writeFile(path.join(baseDir, 'README.md'), newMD)
     git.commit('Updated README for latest release info', 'README.md')
+    fs.writeFileSync(path.join(baseDir, 'README.md'), newMD)
     git.push()
   } catch (error) {
     core.setFailed(error.message)
