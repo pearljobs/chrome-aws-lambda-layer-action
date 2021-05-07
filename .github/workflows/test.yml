@@ -34,3 +34,4 @@ jobs:
           repo: chrome-aws-lambda
           regions: us-west-1,us-east-1
           bucketPrefix: 'static-files'
+          commit: false
