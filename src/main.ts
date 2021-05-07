@@ -43,6 +43,7 @@ async function run(): Promise<void> {
     const bucketPrefix: string = core.getInput('bucketPrefix', {required: true})
     const commit: string = core.getInput('commit', {required: true})
     const token: string = core.getInput('token', {required: true})
+    const repoDescription: string = core.getInput('description')
 
     const baseDir = path.join(process.cwd(), '')
     const git = simpleGit({baseDir})
@@ -175,16 +176,27 @@ async function run(): Promise<void> {
         ).replace(/:.*/, '')} | \`${newLayer.LayerArn}\` |`),
       ''
     )
+    const release = await octokit.request(
+      'GET /repos/{owner}/{repo}/releases/latest',
+      {
+        owner: repoOwner,
+        repo
+      }
+    )
     const newMD = `# Lambda Layers For ${repo}
-
-Last updated ${new Date()}
+${repoDescription}
+# Getting Started 
+Click on Layers and choose "Add a layer", and "Provide a layer version ARN" and enter the ARN from below for your region
+# Latest Layers
+Last updated: ${new Date()}
+Release/build: \`${release.data.tag_name}\`
     
 | Region | ARN |
 | --- | --- |${regionArns}`
 
     if (commit === 'true') {
-      git.commit('Updated README for latest release info', 'README.md')
       fs.writeFileSync(path.join(baseDir, 'README.md'), newMD)
+      git.commit('Updated README for latest release info', 'README.md')
       git.push()
     }
   } catch (error) {
