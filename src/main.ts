@@ -37,11 +37,11 @@ function uploadFromStream(
 
 async function run(): Promise<void> {
   try {
-    const repo: string = core.getInput('repo')
-    const repoOwner: string = core.getInput('repoOwner')
-    const regionsRaw: string = core.getInput('regions')
-    const bucketPrefix: string = core.getInput('bucketPrefix')
-    const commit: string = core.getInput('commit')
+    const repo: string = core.getInput('repo', {required: true})
+    const repoOwner: string = core.getInput('repoOwner', {required: true})
+    const regionsRaw: string = core.getInput('regions', {required: true})
+    const bucketPrefix: string = core.getInput('bucketPrefix', {required: true})
+    const commit: string = core.getInput('commit', {required: true})
 
     const baseDir = path.join(process.cwd(), '')
     const git = simpleGit({baseDir})
@@ -195,7 +195,7 @@ Last updated ${new Date()}
       git.push()
     }
   } catch (error) {
-    core.setFailed(error.message)
+    core.setFailed(`Action failed with error ${error}`)
   }
 }
 
