@@ -199,6 +199,7 @@ ${repoDescription}
 Click on Layers and choose "Add a layer", and "Provide a layer version ARN" and enter the ARN from below for your region
 # Latest Layers
 Last updated: ${new Date()}
+
 Release/build: \`${release.data[0].name}\`
     
 | Region | ARN |

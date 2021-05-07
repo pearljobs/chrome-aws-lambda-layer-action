@@ -1,5 +1,5 @@
 name: 'Chrome AWS Lambda Layer Github Action'
-description: 'A github action for publishing lambda layers, but really just one'
+description: 'A GitHub action for publishing lambda layers, but really just one'
 author: 'Alex Velikanov'
 inputs:
   repoOwner:
