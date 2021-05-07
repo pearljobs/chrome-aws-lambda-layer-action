@@ -107,17 +107,18 @@ async function run(): Promise<void> {
     for (const region of regions) {
       const s3 = new S3({region})
       try {
-        const bucket = await s3
-          .headBucket({Bucket: bucketPrefix + region})
-          .promise()
+        const Bucket = bucketPrefix + region
+        const bucket = await s3.headBucket({Bucket}).promise()
         if (bucket.$response.httpResponse.statusCode !== 200) {
-          core.info(`Creating new bucket ${bucketPrefix + region} in ${region}`)
-          await s3
-            .createBucket({
-              Bucket: bucketPrefix + region,
-              CreateBucketConfiguration: {LocationConstraint: region}
-            })
-            .promise()
+          core.info(`Creating new bucket ${Bucket} in ${region}`)
+          if (region === 'us-east-1') await s3.createBucket({Bucket}).promise()
+          else
+            await s3
+              .createBucket({
+                Bucket,
+                CreateBucketConfiguration: {LocationConstraint: region}
+              })
+              .promise()
         }
       } catch (e) {
         core.info(`Creating new bucket ${bucketPrefix + region} in ${region}`)
