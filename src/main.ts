@@ -50,7 +50,7 @@ async function run(): Promise<void> {
     const regionalInfo = new Map<string, string | undefined>()
 
     // Get run data
-    core.debug('Collecting existing layer data')
+    core.info('Collecting existing layer data')
     for (const region of regions) {
       const lambda = new Lambda({region})
       const versions = await lambda
@@ -72,7 +72,7 @@ async function run(): Promise<void> {
     }
 
     // Check for new release
-    core.debug('Checking for latest release')
+    core.info('Checking for latest release')
     const releaseData = await octokit.request(
       'GET /repos/{owner}/{repo}/actions/artifacts',
       {
@@ -98,12 +98,12 @@ async function run(): Promise<void> {
     const numberedId = parseInt(artifactIdRaw, 10)
 
     if (numberedId === releaseData.data.artifacts[0].id) {
-      core.debug('Layer is current, will only proceed if new region added')
+      core.info('Layer is current, will only proceed if new region added')
       if (!Array.from(regionalInfo.values()).includes(undefined)) return
     }
 
     // Check buckets and create if doesn't exist
-    core.debug('Checking buckets')
+    core.info('Checking buckets')
     for (const region of regions) {
       const s3 = new S3({region})
       try {
@@ -111,9 +111,7 @@ async function run(): Promise<void> {
           .headBucket({Bucket: bucketPrefix + region})
           .promise()
         if (bucket.$response.httpResponse.statusCode !== 200) {
-          core.debug(
-            `Creating new bucket ${bucketPrefix + region} in ${region}`
-          )
+          core.info(`Creating new bucket ${bucketPrefix + region} in ${region}`)
           await s3
             .createBucket({
               Bucket: bucketPrefix + region,
@@ -122,7 +120,7 @@ async function run(): Promise<void> {
             .promise()
         }
       } catch (e) {
-        core.debug(`Creating new bucket ${bucketPrefix + region} in ${region}`)
+        core.info(`Creating new bucket ${bucketPrefix + region} in ${region}`)
         await s3
           .createBucket({
             Bucket: bucketPrefix + region,
@@ -133,7 +131,7 @@ async function run(): Promise<void> {
     }
 
     // Download, Unzip, Upload to S3
-    core.debug('Collecting files and uploading to S3')
+    core.info('Collecting files and uploading to S3')
     const axResp = await axios.get(
       'https://api.github.com/repos/alixaxel/chrome-aws-lambda/actions/artifacts/51386671/zip',
       {
@@ -154,7 +152,7 @@ async function run(): Promise<void> {
     const objectName = s3Info.map(info => info.Key)[0]
 
     // Publish Version
-    core.debug('Publishing layers')
+    core.info('Publishing layers')
     const newLayers = []
     for (const [region] of regionalInfo.entries()) {
       const lambda = new Lambda({region})
@@ -170,10 +168,10 @@ async function run(): Promise<void> {
     }
 
     for (const layer of newLayers)
-      core.debug(`Created layer version ${layer.LayerArn}`)
+      core.info(`Created layer version ${layer.LayerArn}`)
 
     // Update MD and config
-    core.debug('Updating README')
+    core.info('Updating README')
     const regionArns = newLayers.reduce(
       (acc, newLayer) =>
         (acc += `\n| ${newLayer.LayerArn?.replace(
