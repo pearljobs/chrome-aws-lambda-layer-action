@@ -42,6 +42,7 @@ async function run(): Promise<void> {
     const regionsRaw: string = core.getInput('regions', {required: true})
     const bucketPrefix: string = core.getInput('bucketPrefix', {required: true})
     const commit: string = core.getInput('commit', {required: true})
+    const token: string = core.getInput('token', {required: true})
 
     const baseDir = path.join(process.cwd(), '')
     const git = simpleGit({baseDir})
@@ -106,39 +107,32 @@ async function run(): Promise<void> {
     core.info('Checking buckets')
     for (const region of regions) {
       const s3 = new S3({region})
+      const Bucket = bucketPrefix + region
       try {
-        const Bucket = bucketPrefix + region
         const bucket = await s3.headBucket({Bucket}).promise()
-        if (bucket.$response.httpResponse.statusCode !== 200) {
-          core.info(`Creating new bucket ${Bucket} in ${region}`)
-          if (region === 'us-east-1') await s3.createBucket({Bucket}).promise()
-          else
-            await s3
-              .createBucket({
-                Bucket,
-                CreateBucketConfiguration: {LocationConstraint: region}
-              })
-              .promise()
-        }
+        if (bucket.$response.httpResponse.statusCode !== 200)
+          throw new Error('Bucketneeds to be created')
       } catch (e) {
-        core.info(`Creating new bucket ${bucketPrefix + region} in ${region}`)
-        await s3
-          .createBucket({
-            Bucket: bucketPrefix + region,
-            CreateBucketConfiguration: {LocationConstraint: region}
-          })
-          .promise()
+        core.info(`Creating new bucket ${Bucket} in ${region}`)
+        if (region === 'us-east-1') await s3.createBucket({Bucket}).promise()
+        else
+          await s3
+            .createBucket({
+              Bucket,
+              CreateBucketConfiguration: {LocationConstraint: region}
+            })
+            .promise()
       }
     }
 
     // Download, Unzip, Upload to S3
     core.info('Collecting files and uploading to S3')
     const axResp = await axios.get(
-      'https://api.github.com/repos/alixaxel/chrome-aws-lambda/actions/artifacts/51386671/zip',
+      releaseData.data.artifacts[0].archive_download_url,
       {
         responseType: 'stream',
         headers: {
-          Authorization: `token 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`
+          Authorization: `token ${token}`
         }
       }
     )
