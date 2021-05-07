@@ -176,20 +176,17 @@ async function run(): Promise<void> {
         ).replace(/:.*/, '')} | \`${newLayer.LayerArn}\` |`),
       ''
     )
-    const release = await octokit.request(
-      'GET /repos/{owner}/{repo}/releases/latest',
-      {
-        owner: repoOwner,
-        repo
-      }
-    )
+    const release = await octokit.request('GET /repos/{owner}/{repo}/tags', {
+      owner: repoOwner,
+      repo
+    })
     const newMD = `# Lambda Layers For ${repo}
 ${repoDescription}
 # Getting Started 
 Click on Layers and choose "Add a layer", and "Provide a layer version ARN" and enter the ARN from below for your region
 # Latest Layers
 Last updated: ${new Date()}
-Release/build: \`${release.data.tag_name}\`
+Release/build: \`${release.data[0].name}\`
     
 | Region | ARN |
 | --- | --- |${regionArns}`
