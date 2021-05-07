@@ -1,8 +1,8 @@
 {
-  "name": "typescript-action",
-  "version": "0.0.0",
+  "name": "chrome-aws-lambda-layer-action",
+  "version": "1.0.0",
   "private": true,
-  "description": "TypeScript template action",
+  "description": "A GitHub action for publishing lambda layers, but really just one",
   "main": "lib/main.js",
   "scripts": {
     "build": "tsc",
