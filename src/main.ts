@@ -149,19 +149,32 @@ async function run(): Promise<void> {
 
     // Publish Version
     core.info('Publishing layers')
-    const newLayers = []
+    const newLayersPromises = []
     for (const [region] of regionalInfo.entries()) {
       const lambda = new Lambda({region})
-      newLayers.push(
-        await lambda
-          .publishLayerVersion({
-            LayerName: repo,
-            Description: `Latest release of ${repo} layer. Artifact: "${releaseData.data.artifacts[0].id}"`,
-            Content: {S3Bucket: bucketPrefix + region, S3Key: objectName}
-          })
-          .promise()
+      newLayersPromises.push(
+        (async () => {
+          const version = await lambda
+            .publishLayerVersion({
+              LayerName: repo,
+              Description: `Latest release of ${repo} layer. Artifact: "${releaseData.data.artifacts[0].id}"`,
+              Content: {S3Bucket: bucketPrefix + region, S3Key: objectName}
+            })
+            .promise()
+          await lambda
+            .addLayerVersionPermission({
+              LayerName: version.LayerArn || '',
+              VersionNumber: version.Version || 1,
+              StatementId: 'public-layer',
+              Action: 'lambda:GetLayerVersion',
+              Principal: '*'
+            })
+            .promise()
+          return version
+        })()
       )
     }
+    const newLayers = await Promise.all(newLayersPromises)
 
     for (const layer of newLayers)
       core.info(`Created layer version ${layer.LayerArn}`)
@@ -173,7 +186,7 @@ async function run(): Promise<void> {
         (acc += `\n| ${newLayer.LayerArn?.replace(
           'arn:aws:lambda:',
           ''
-        ).replace(/:.*/, '')} | \`${newLayer.LayerArn}\` |`),
+        ).replace(/:.*/, '')} | \`${newLayer.LayerVersionArn}\` |`),
       ''
     )
     const release = await octokit.request('GET /repos/{owner}/{repo}/tags', {
