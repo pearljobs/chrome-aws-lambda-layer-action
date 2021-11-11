@@ -27,7 +27,7 @@
   "dependencies": {
     "@actions/core": "^1.2.6",
     "@actions/github": "^4.0.0",
-    "@octokit/core": "^3.4.0",
+    "@octokit/core": "3.5.1",
     "@octokit/rest": "^18.5.3",
     "aws-sdk": "^2.900.0",
     "axios": "^0.21.1",
