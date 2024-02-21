@@ -30,7 +30,7 @@
     "@octokit/core": "^3.4.0",
     "@octokit/rest": "^18.5.3",
     "aws-sdk": "^2.900.0",
-    "axios": "^0.21.1",
+    "axios": "^0.28.0",
     "simple-git": "^2.38.0",
     "unzipper": "^0.10.11"
   },
