@@ -31,7 +31,7 @@
     "@octokit/rest": "^18.5.3",
     "aws-sdk": "^2.900.0",
     "axios": "^0.21.1",
-    "simple-git": "^2.38.0",
+    "simple-git": "^3.0.0",
     "unzipper": "^0.10.11"
   },
   "devDependencies": {
